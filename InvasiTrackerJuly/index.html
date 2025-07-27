@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invasi-Tracker</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #14532d; /* richer dark green */
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 0;
+      overflow: hidden;
+    }
+    .container {
+      background: rgba(20, 83, 45, 0.95); /* richer dark green with opacity */
+      padding: 1rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+      text-align: center;
+      width: 100%;
+      height: 100vh;
+      position: relative;
+      margin: 0;
+      max-height: 100vh;
+      overflow-y: auto;
+      margin-left: 200px;
+      margin-right: 180px;
+      width: calc(100vw - 380px);
+      font-size: 1.1em;
+    }
+    .us-map {
+      display: block;
+      margin: 0 auto 2rem auto;
+      max-width: 90vw;
+      height: auto;
+      width: 500px;
+      background: none;
+    }
+    .species-sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 200px;
+      height: 100%;
+      background: rgba(30, 60, 30, 0.98);
+      color: #fff;
+      border-radius: 0;
+      box-shadow: 2px 0 16px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      z-index: 10;
+      transition: left 0.3s;
+      font-size: 0.9em;
+      padding: 1rem;
+    }
+    .species-sidebar.open {
+      left: 0;
+    }
+    .species-list-item {
+      padding: 1rem;
+      border-bottom: 1px solid #2a4a2a;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .species-list-item:hover {
+      background: #1e3c1e;
+    }
+    .species-img {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .sidebar-toggle {
+      position: absolute;
+      left: -8px;
+      top: 24px;
+      background: #1e3c1e;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: background 0.2s;
+    }
+    .sidebar-toggle:hover {
+      background: #256d3a;
+    }
+    .circular-btn, button[type="submit"] {
+      border-radius: 50px;
+      padding: 0.5em 1.5em;
+      border: none;
+      background: linear-gradient(90deg, #256d3a 60%, #1e3c1e 100%);
+      color: #fff;
+      font-weight: bold;
+      font-size: 1.1em;
+      margin: 0.5em 0.2em;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      transition: background 0.2s, transform 0.1s;
+    }
+    .circular-btn:hover, button[type="submit"]:hover {
+      background: linear-gradient(90deg, #1e3c1e 60%, #256d3a 100%);
+      transform: scale(1.07);
+    }
+    .sightings-list {
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.1);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    .sighting-card {
+      background: rgba(30,60,30,0.7);
+      border-radius: 10px;
+      padding: 0.7em 1em;
+      margin-bottom: 0.7em;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sighting-info {
+      flex: 1;
+    }
+    .sighting-species {
+      font-weight: bold;
+      color: #bfffbf;
+    }
+    .sighting-location {
+      color: #bfb;
+      font-size: 0.95em;
+    }
+    .sighting-notes {
+      font-size: 0.95em;
+      color: #eee;
+    }
+    .filter-select {
+      border-radius: 50px;
+      padding: 0.4em 1em;
+      border: 1px solid #256d3a;
+      background: #1e3c1e;
+      color: #fff;
+      font-size: 1em;
+      margin-bottom: 1em;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-content {
+      background: #1e3c1e;
+      color: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 400px;
+      width: 90vw;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+      text-align: left;
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 24px;
+      background: #256d3a;
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .map-point {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #ff4444;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      z-index: 5;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .map-container {
+      position: relative;
+      display: inline-block;
+      margin: 0 auto 2rem auto;
+    }
+    @media (max-width: 600px) {
+      .us-map {
+        width: 100%;
+        max-width: 100vw;
+      }
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    .educational-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 180px;
+      height: 100%;
+      background: rgba(30, 60, 30, 0.98);
+      color: #fff;
+      border-radius: 0;
+      box-shadow: -2px 0 16px rgba(0,0,0,0.2);
+      overflow-y: auto;
+      z-index: 10;
+      padding: 1rem;
+      font-size: 0.8em;
+    }
+    .educational-panel h3 {
+      color: #bfffbf;
+      margin: 1rem 0 0.5rem 0;
+      font-size: 1em;
+    }
+    .educational-panel p {
+      margin: 0.5rem 0;
+      line-height: 1.4;
+    }
+    .educational-panel ul {
+      margin: 0.5rem 0;
+      padding-left: 1.2rem;
+    }
+    .educational-panel li {
+      margin: 0.3rem 0;
+    }
+    .educational-panel a {
+      color: #bfffbf;
+      text-decoration: none;
+    }
+    .educational-panel a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="species-sidebar" id="speciesSidebar">
+    <h2 style="margin:1rem 0 0.5rem 0;">Invasive Species</h2>
+    <input type="text" id="speciesSearch" placeholder="Search species..." style="width:90%;margin:0.5rem 0 1rem 0;padding:0.4em 1em;border-radius:50px;border:1px solid #256d3a;background:#1e3c1e;color:#fff;" />
+    <div id="speciesList"></div>
+  </div>
+  <div class="container">
+    <div class="map-container">
+      <img src="us-map.png" id="usMapImg" class="us-map" alt="Map of the United States" />
+      <div id="mapPoints"></div>
+    </div>
+    <h1>Invasi-Tracker</h1>
+    <form id="sightingForm" autocomplete="off" style="margin-bottom:1.5rem;">
+      <label>
+        Species:<br>
+        <input type="text" id="species" required placeholder="e.g. Burmese Python" list="speciesDatalist" style="width: 100%; margin-bottom: 0.5rem; border-radius: 50px; padding: 0.4em 1em; border: 1px solid #256d3a; background: #1e3c1e; color: #fff;" />
+        <datalist id="speciesDatalist"></datalist>
+      </label><br>
+      <label>
+        State:<br>
+        <select id="stateSelect" style="width: 100%; margin-bottom: 0.5rem; border-radius: 50px; padding: 0.4em 1em; border: 1px solid #256d3a; background: #1e3c1e; color: #fff;">
+          <option value="">Select State</option>
+          <option value="AL">Alabama</option>
+          <option value="AK">Alaska</option>
+          <option value="AZ">Arizona</option>
+          <option value="AR">Arkansas</option>
+          <option value="CA">California</option>
+          <option value="CO">Colorado</option>
+          <option value="CT">Connecticut</option>
+          <option value="DE">Delaware</option>
+          <option value="FL">Florida</option>
+          <option value="GA">Georgia</option>
+          <option value="HI">Hawaii</option>
+          <option value="ID">Idaho</option>
+          <option value="IL">Illinois</option>
+          <option value="IN">Indiana</option>
+          <option value="IA">Iowa</option>
+          <option value="KS">Kansas</option>
+          <option value="KY">Kentucky</option>
+          <option value="LA">Louisiana</option>
+          <option value="ME">Maine</option>
+          <option value="MD">Maryland</option>
+          <option value="MA">Massachusetts</option>
+          <option value="MI">Michigan</option>
+          <option value="MN">Minnesota</option>
+          <option value="MS">Mississippi</option>
+          <option value="MO">Missouri</option>
+          <option value="MT">Montana</option>
+          <option value="NE">Nebraska</option>
+          <option value="NV">Nevada</option>
+          <option value="NH">New Hampshire</option>
+          <option value="NJ">New Jersey</option>
+          <option value="NM">New Mexico</option>
+          <option value="NY">New York</option>
+          <option value="NC">North Carolina</option>
+          <option value="ND">North Dakota</option>
+          <option value="OH">Ohio</option>
+          <option value="OK">Oklahoma</option>
+          <option value="OR">Oregon</option>
+          <option value="PA">Pennsylvania</option>
+          <option value="RI">Rhode Island</option>
+          <option value="SC">South Carolina</option>
+          <option value="SD">South Dakota</option>
+          <option value="TN">Tennessee</option>
+          <option value="TX">Texas</option>
+          <option value="UT">Utah</option>
+          <option value="VT">Vermont</option>
+          <option value="VA">Virginia</option>
+          <option value="WA">Washington</option>
+          <option value="WV">West Virginia</option>
+          <option value="WI">Wisconsin</option>
+          <option value="WY">Wyoming</option>
+        </select>
+      </label><br>
+      <label>
+        Town:<br>
+        <input type="text" id="town" placeholder="Enter your town/city" style="width: 100%; margin-bottom: 0.5rem; border-radius: 50px; padding: 0.4em 1em; border: 1px solid #256d3a; background: #1e3c1e; color: #fff;" />
+      </label><br>
+      <label>
+        Notes:<br>
+        <input type="text" id="notes" placeholder="Location details, behavior, etc." style="width: 100%; margin-bottom: 0.5rem; border-radius: 50px; padding: 0.4em 1em; border: 1px solid #256d3a; background: #1e3c1e; color: #fff;" />
+      </label><br>
+      <input type="hidden" id="coords" />
+      <button type="submit">Add Sighting</button>
+      <button type="button" class="circular-btn" id="clearSightingsBtn" style="background:#a33;">Clear All</button>
+      <span id="formMsg" style="color: #ffb; margin-left: 1rem;"></span>
+    </form>
+    <select id="filterSelect" class="filter-select">
+      <option value="">Show All Species</option>
+    </select>
+    <div id="sightingsList" class="sightings-list"></div>
+  </div>
+  <div class="educational-panel" id="educationalPanel">
+    <h3>Research & Education</h3>
+    <p><strong>How to Research Invasive Species:</strong></p>
+    <ul>
+      <li>Use iNaturalist app for identification</li>
+      <li>Check your state's invasive species list</li>
+      <li>Consult local extension offices</li>
+      <li>Use field guides and online databases</li>
+    </ul>
+    
+    <h3>Reporting Procedures</h3>
+    <p><strong>When you find an invasive species:</strong></p>
+    <ul>
+      <li>Take clear photos (multiple angles)</li>
+      <li>Note exact location and date</li>
+      <li>Report to your state's invasive species hotline</li>
+      <li>Contact local wildlife authorities</li>
+      <li>Use apps like EDDMapS or iNaturalist</li>
+    </ul>
+    
+    <h3>Prevention Tips</h3>
+    <ul>
+      <li>Clean boats and equipment thoroughly</li>
+      <li>Don't release pets into the wild</li>
+      <li>Buy local firewood only</li>
+      <li>Plant native species in your garden</li>
+      <li>Learn to identify local invasives</li>
+    </ul>
+    
+    <h3>Educational Resources</h3>
+    <p><strong>Government Agencies:</strong></p>
+    <ul>
+      <li><a href="https://www.fws.gov" target="_blank">U.S. Fish & Wildlife Service</a></li>
+      <li><a href="https://www.invasivespeciesinfo.gov" target="_blank">National Invasive Species Information Center</a></li>
+      <li><a href="https://www.aphis.usda.gov" target="_blank">USDA APHIS</a></li>
+    </ul>
+    
+    <p><strong>Apps & Tools:</strong></p>
+    <ul>
+      <li><a href="https://www.eddmaps.org" target="_blank">EDDMapS</a> - Early Detection & Distribution</li>
+      <li><a href="https://www.inaturalist.org" target="_blank">iNaturalist</a> - Species identification</li>
+      <li><a href="https://www.bugwood.org" target="_blank">Bugwood</a> - Image database</li>
+    </ul>
+    
+    <h3>Citizen Science</h3>
+    <p>Help researchers by:</p>
+    <ul>
+      <li>Participating in monitoring programs</li>
+      <li>Reporting sightings promptly</li>
+      <li>Volunteering for removal efforts</li>
+      <li>Educating others about invasives</li>
+    </ul>
+    
+    <h3>Safety First</h3>
+    <p><strong>Never:</strong></p>
+    <ul>
+      <li>Handle venomous species</li>
+      <li>Attempt removal without training</li>
+      <li>Use chemicals without proper permits</li>
+      <li>Transport invasive species</li>
+    </ul>
+  </div>
+  <div id="modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+  <script>
+    // --- Invasive Species Database ---
+    const invasiveSpecies = [
+      {
+        name: "European Green Crab",
+        scientificName: "Carcinus maenas",
+        image: "",
+        description: "Voracious predator consuming clams, mussels, oysters. Destroys eelgrass beds.",
+        region: "East and West Coasts",
+        impact: "Predation on native shellfish, destruction of eelgrass beds."
+      },
+      {
+        name: "Zebra Mussel",
+        scientificName: "Dreissena polymorpha",
+        image: "",
+        description: "Clogs infrastructure, filters plankton altering food webs.",
+        region: "Great Lakes, Mississippi-Ohio system",
+        impact: "Infrastructure damage, native species decline."
+      },
+      {
+        name: "Hydrilla",
+        scientificName: "Hydrilla verticillata",
+        image: "",
+        description: "Forms dense mats blocking water flow and crowding native plants.",
+        region: "Southern, eastern, and Gulf Coast waterways",
+        impact: "Water flow blockage, native plant displacement."
+      },
+      {
+        name: "Northern Snakehead",
+        scientificName: "Channa argus",
+        image: "",
+        description: "Apex predator disrupting local aquatic ecosystems.",
+        region: "Chesapeake Bay tributaries, MD/VA",
+        impact: "Native fish displacement, ecosystem disruption."
+      },
+      {
+        name: "Brown-tail Moth",
+        scientificName: "Euproctis chrysorrhoea",
+        image: "",
+        description: "Defoliates hardwoods. Larval hairs cause allergic reactions.",
+        region: "Coastal New England",
+        impact: "Tree defoliation, human health impacts."
+      },
+      {
+        name: "Spongy Moth",
+        scientificName: "Lymantria dispar",
+        image: "",
+        description: "Major defoliator of oaks and hardwoods.",
+        region: "Eastern and Mid-Western states",
+        impact: "Forest defoliation, economic losses."
+      },
+      {
+        name: "Spotted Lanternfly",
+        scientificName: "Lycorma delicatula",
+        image: "",
+        description: "Feeds on grapevines and fruit trees. Secretes honeydew.",
+        region: "Mid-Atlantic expanding to Northeast",
+        impact: "Agricultural damage, mold promotion."
+      },
+      {
+        name: "Emerald Ash Borer",
+        scientificName: "Agrilus planipennis",
+        image: "",
+        description: "Kills ash trees within years.",
+        region: "Midwest, Northeast, Mid-Atlantic",
+        impact: "Ash tree mortality, economic impact."
+      },
+      {
+        name: "Hemlock Woolly Adelgid",
+        scientificName: "Adelges tsugae",
+        image: "",
+        description: "Sap-feeder killing eastern hemlock.",
+        region: "Eastern U.S. including Appalachian forests",
+        impact: "Hemlock mortality, forest structure alteration."
+      },
+      {
+        name: "Asian Long-horned Beetle",
+        scientificName: "Anoplophora glabripennis",
+        image: "",
+        description: "Attacks maples, poplars, willows, elms.",
+        region: "Parts of Northeast, Midwest",
+        impact: "Tree mortality, urban forest loss."
+      },
+      {
+        name: "Southern Pine Beetle",
+        scientificName: "Dendroctonus frontalis",
+        image: "",
+        description: "Infests pine forests causing large-scale die-off.",
+        region: "Native to Southeast, invasive in Northeast",
+        impact: "Pine forest die-off."
+      },
+      {
+        name: "Winter Moth",
+        scientificName: "Operophtera brumata",
+        image: "",
+        description: "Defoliates oaks, maples, cherries.",
+        region: "Coastal and regional pockets across Northeast",
+        impact: "Tree defoliation, reduced vigor."
+      },
+      {
+        name: "Chestnut Blight",
+        scientificName: "Cryphonectria parasitica",
+        image: "",
+        description: "Fungal pathogen that nearly eliminated American chestnut.",
+        region: "Eastern U.S.",
+        impact: "American chestnut elimination."
+      },
+      {
+        name: "Dutch Elm Disease",
+        scientificName: "Ophiostoma ulmi",
+        image: "",
+        description: "Fungus decimated American elm populations.",
+        region: "Nationwide",
+        impact: "American elm population decline."
+      },
+      {
+        name: "Sudden Oak Death",
+        scientificName: "Phytophthora ramorum",
+        image: "",
+        description: "Kills tanoaks and other oaks.",
+        region: "California and parts of East",
+        impact: "Oak mortality, pathogen threat."
+      },
+      {
+        name: "Beech Bark Disease",
+        scientificName: "Neonectria spp.",
+        image: "",
+        description: "Fungus infesting American beech.",
+        region: "Northeast",
+        impact: "American beech mortality."
+      },
+      {
+        name: "Beech Leaf Disease",
+        scientificName: "Litylenchus crenatae",
+        image: "",
+        description: "Nematode disease affecting American beech.",
+        region: "Multiple states",
+        impact: "Beech defoliation and mortality."
+      },
+      {
+        name: "Thousand Cankers Disease",
+        scientificName: "Geosmithia morbida",
+        image: "",
+        description: "Fungus attacking black walnut trees.",
+        region: "Western and eastern states",
+        impact: "Black walnut mortality."
+      },
+      {
+        name: "Oak Wilt",
+        scientificName: "Bretziella fagacearum",
+        image: "",
+        description: "Fungal pathogen causing rapid oak death.",
+        region: "Midwest",
+        impact: "Oak mortality."
+      },
+      {
+        name: "Butternut Canker",
+        scientificName: "Sirococcus clavigignenti-juglandacearum",
+        image: "",
+        description: "Fungal disease affecting butternut trees.",
+        region: "Eastern U.S.",
+        impact: "Butternut tree decline."
+      },
+      {
+        name: "European Starling",
+        scientificName: "Sturnus vulgaris",
+        image: "",
+        description: "Competes with native cavity nesters.",
+        region: "Nationwide",
+        impact: "Native bird competition, crop damage."
+      },
+      {
+        name: "Feral Cat",
+        scientificName: "Felis catus",
+        image: "",
+        description: "Kills billions of birds and small mammals annually.",
+        region: "Nationwide",
+        impact: "Wildlife predation, disease vector."
+      },
+      {
+        name: "Wild Boar / Feral Swine",
+        scientificName: "Sus scrofa",
+        image: "",
+        description: "Rooting destroys crops and native vegetation.",
+        region: "Southern, Mid-Atlantic, California, Texas, Hawaii",
+        impact: "Crop damage, disease vector, wildlife threat."
+      },
+      {
+        name: "Nutria",
+        scientificName: "Myocastor coypus",
+        image: "",
+        description: "Burrows destabilize wetlands. Devour vegetation.",
+        region: "Gulf Coast, Southeast, Pacific Northwest",
+        impact: "Wetland destabilization, vegetation destruction."
+      },
+      {
+        name: "Burmese Python",
+        scientificName: "Python bivittatus",
+        image: "",
+        description: "Large predator reducing mammal abundance.",
+        region: "South Florida Everglades",
+        impact: "Mammal population reduction, ecological disruption."
+      },
+      {
+        name: "Asian Giant Hornet",
+        scientificName: "Vespa mandarinia",
+        image: "",
+        description: "Preys on honey bees. Painful to humans.",
+        region: "Detected in Washington state since 2019",
+        impact: "Honey bee predation, public health concern."
+      },
+      {
+        name: "Asian Tiger Mosquito",
+        scientificName: "Aedes albopictus",
+        image: "",
+        description: "Vector of dengue, chikungunya, West Nile.",
+        region: "Southeast, spreading north",
+        impact: "Disease vector, aggressive biting."
+      },
+      {
+        name: "Garlic Mustard",
+        scientificName: "Alliaria petiolata",
+        image: "",
+        description: "Allelopathic plant suppressing forest understory.",
+        region: "Eastern and parts of Midwest U.S.",
+        impact: "Forest understory suppression, soil alteration."
+      },
+      {
+        name: "Japanese Knotweed",
+        scientificName: "Reynoutria japonica",
+        image: "",
+        description: "Spreads aggressively. Damages infrastructure.",
+        region: "Eastern, Mid-Atlantic, Pacific Coast",
+        impact: "Infrastructure damage, native displacement."
+      },
+      {
+        name: "Kudzu",
+        scientificName: "Pueraria montana",
+        image: "",
+        description: "Fast-growing vine overtaking trees and infrastructure.",
+        region: "Southeastern states extending north",
+        impact: "Vegetation overtaking, infrastructure damage."
+      },
+      {
+        name: "Purple Loosestrife",
+        scientificName: "Lythrum salicaria",
+        image: "",
+        description: "Forms dense stands choking native wetland plants.",
+        region: "Wetlands nationwide",
+        impact: "Native plant displacement, biodiversity reduction."
+      },
+      {
+        name: "Phragmites",
+        scientificName: "Phragmites australis",
+        image: "",
+        description: "Dense reed monocultures altering hydrology.",
+        region: "Coastal marshes and inland wetlands",
+        impact: "Hydrology alteration, native habitat displacement."
+      },
+      {
+        name: "Reed Canary Grass",
+        scientificName: "Phalaris arundinacea",
+        image: "",
+        description: "Crowds native plants. Alters wetland ecology.",
+        region: "Wet meadows, floodplains",
+        impact: "Native plant crowding, wetland ecology alteration."
+      },
+      {
+        name: "Porcelainberry",
+        scientificName: "Ampelopsis brevipedunculata",
+        image: "",
+        description: "Invasive vine smothering native shrubs and trees.",
+        region: "Eastern and Great Lakes",
+        impact: "Native plant smothering."
+      },
+      {
+        name: "English Ivy",
+        scientificName: "Hedera helix",
+        image: "",
+        description: "Outcompetes native plants, increases tick risk.",
+        region: "Multiple regions",
+        impact: "Native plant competition, habitat alteration."
+      },
+      {
+        name: "Japanese Honeysuckle",
+        scientificName: "Lonicera japonica",
+        image: "",
+        description: "Aggressive vine smothering native vegetation.",
+        region: "Eastern and Midwestern U.S.",
+        impact: "Native plant smothering, habitat alteration."
+      },
+      {
+        name: "Multiflora Rose",
+        scientificName: "Rosa multiflora",
+        image: "",
+        description: "Forms dense thickets excluding native plants.",
+        region: "Eastern and Midwestern U.S.",
+        impact: "Native plant exclusion, habitat alteration."
+      },
+      {
+        name: "Tree of Heaven",
+        scientificName: "Ailanthus altissima",
+        image: "",
+        description: "Fast-growing tree with allelopathic properties.",
+        region: "Nationwide",
+        impact: "Native tree competition, allelopathic effects."
+      },
+      {
+        name: "Autumn Olive",
+        scientificName: "Elaeagnus umbellata",
+        image: "",
+        description: "Native plant competition, habitat alteration, tick risk increase."
+      }
+    ];
+    // --- Populate Species Sidebar and Datalist ---
+    function renderSpeciesList(filter = "") {
+      const list = document.getElementById('speciesList');
+      const datalist = document.getElementById('speciesDatalist');
+      const filterLower = filter.toLowerCase();
+      list.innerHTML = invasiveSpecies
+        .filter(s => s.name.toLowerCase().includes(filterLower))
+        .map(s => `
+          <div class="species-list-item" data-name="${s.name}">
+            <img src="${s.image}" class="species-img" alt="${s.name}" />
+            <b>${s.name}</b><br>
+            <span style="font-size:0.95em;">${s.region}</span>
+            <p style="font-size:0.9em; margin:0.5em 0 0 0;">${s.description}</p>
+          </div>
+        `).join('');
+      datalist.innerHTML = invasiveSpecies
+        .map(s => `<option value="${s.name}"></option>`).join('');
+      // Populate filter select
+      const filterSelect = document.getElementById('filterSelect');
+      filterSelect.innerHTML = '<option value="">Show All Species</option>' +
+        invasiveSpecies.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+    }
+    renderSpeciesList();
+    document.getElementById('speciesSearch').addEventListener('input', e => {
+      renderSpeciesList(e.target.value);
+    });
+    // Sidebar toggle
+    const sidebar = document.getElementById('speciesSidebar');
+    document.getElementById('sidebarToggle').onclick = () => {
+      sidebar.classList.toggle('open');
+    };
+    // Click species in sidebar to autofill form
+    document.getElementById('speciesList').onclick = function(e) {
+      let el = e.target;
+      while (el && !el.classList.contains('species-list-item')) el = el.parentElement;
+      if (el) {
+        document.getElementById('species').value = el.getAttribute('data-name');
+        sidebar.classList.remove('open');
+      }
+    };
+    // --- US Map Image Click Handler ---
+    const usMapImg = document.getElementById('usMapImg');
+    const coordsInput = document.getElementById('coords');
+    const mapPoints = document.getElementById('mapPoints');
+    
+    usMapImg.addEventListener('click', function(e) {
+      const rect = usMapImg.getBoundingClientRect();
+      const x = Math.round((e.clientX - rect.left) * (usMapImg.naturalWidth / rect.width));
+      const y = Math.round((e.clientY - rect.top) * (usMapImg.naturalHeight / rect.height));
+      coordsInput.value = x + ',' + y;
+      
+      // Add visual point on map
+      const point = document.createElement('div');
+      point.className = 'map-point';
+      point.style.left = (e.clientX - rect.left) + 'px';
+      point.style.top = (e.clientY - rect.top) + 'px';
+      point.title = `Location: (${x}, ${y})`;
+      mapPoints.appendChild(point);
+      
+      document.getElementById('formMsg').textContent = `Location selected: (${x}, ${y})`;
+    });
+    
+    // Clear map points when form is submitted
+    function clearMapPoints() {
+      mapPoints.innerHTML = '';
+    }
+    // --- Sightings Logic ---
+    const sightingsKey = 'invasiSightings';
+    function getSightings() {
+      return JSON.parse(localStorage.getItem(sightingsKey) || '[]');
+    }
+    function saveSightings(sightings) {
+      localStorage.setItem(sightingsKey, JSON.stringify(sightings));
+    }
+    function renderSightings() {
+      const filter = document.getElementById('filterSelect').value;
+      const sightings = getSightings().filter(s => !filter || s.species === filter);
+      const list = document.getElementById('sightingsList');
+      if (!sightings.length) {
+        list.innerHTML = '<em>No sightings yet. Click the map to add one!</em>';
+        return;
+      }
+      list.innerHTML = sightings.map((s, i) =>
+        `<div class='sighting-card'><div class='sighting-info'><span class='sighting-species'>${s.species}</span> ${s.state ? `<span style='color:#ffb;'>(${s.state})</span>` : ''} ${s.town ? `<span style='color:#bfb;'>- ${s.town}</span>` : ''} <span class='sighting-location'>(${s.x}, ${s.y})</span><br><span class='sighting-notes'>${s.notes}</span></div><button class='circular-btn' onclick='showSightingDetails(${i})'>View Details</button></div>`
+      ).join('');
+    }
+    document.getElementById('sightingForm').onsubmit = function(e) {
+      e.preventDefault();
+      const state = document.getElementById('stateSelect').value;
+      const species = document.getElementById('species').value.trim();
+      const town = document.getElementById('town').value.trim();
+      const notes = document.getElementById('notes').value.trim();
+      const coords = document.getElementById('coords').value;
+      
+      if (!coords) {
+        document.getElementById('formMsg').textContent = 'Click the map to select a location!';
+        return;
+      }
+      
+      const [x, y] = coords.split(',').map(Number);
+      const sightings = getSightings();
+      sightings.push({ state, species, town, notes, x, y });
+      saveSightings(sightings);
+      renderSightings();
+      document.getElementById('sightingForm').reset();
+      clearMapPoints();
+      document.getElementById('formMsg').textContent = 'Sighting added!';
+      setTimeout(() => document.getElementById('formMsg').textContent = '', 1500);
+    };
+    // Filter sightings
+    document.getElementById('filterSelect').onchange = renderSightings;
+    // Clear all sightings
+    document.getElementById('clearSightingsBtn').onclick = function() {
+      if (confirm('Are you sure you want to clear all sightings?')) {
+        saveSightings([]);
+        renderSightings();
+      }
+    };
+    // Modal for sighting details
+    window.showSightingDetails = function(idx) {
+      const allSightings = getSightings();
+      const filter = document.getElementById('filterSelect').value;
+      const sightings = allSightings.filter(s => !filter || s.species === filter);
+      const s = sightings[idx];
+      if (!s) return;
+      const species = invasiveSpecies.find(sp => sp.name === s.species);
+      document.getElementById('modalBody').innerHTML = `
+        <h2 style='margin-top:0;'>${s.species}</h2>
+        ${species ? `<img src='${species.image}' style='width:100%;border-radius:8px;margin-bottom:0.5rem;' alt='${species.name}' />` : ''}
+        <div><b>Location:</b> (${s.x}, ${s.y})</div>
+        ${s.state ? `<div><b>State:</b> ${s.state}</div>` : ''}
+        ${s.town ? `<div><b>Town:</b> ${s.town}</div>` : ''}
+        <div><b>Notes:</b> ${s.notes}</div>
+        ${species ? `<div style='margin-top:1em;'><b>Description:</b> ${species.description}<br><b>Region:</b> ${species.region}<br><b>Impact:</b> ${species.impact}</div>` : ''}
+      `;
+      document.getElementById('modal').style.display = 'flex';
+    };
+    document.getElementById('modalClose').onclick = function() {
+      document.getElementById('modal').style.display = 'none';
+    };
+    renderSightings();
+  </script>
+</body>
+</html> 
